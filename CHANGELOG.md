@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com), and this 
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-03-19
+
+### Added
+
+- `--force` for `git gtr clean --merged` to remove dirty merged worktrees, including ones with untracked files ([#158](https://github.com/coderabbitai/git-worktree-runner/pull/158))
+
+### Fixed
+
+- Bash wrapper completions now preserve delegated completion context correctly ([#159](https://github.com/coderabbitai/git-worktree-runner/pull/159))
+
 ## [2.5.0] - 2026-03-11
 
 ### Added
