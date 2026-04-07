@@ -123,6 +123,11 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "cmd_clean accepts --to with a value" {
+  run cmd_clean --to main
+  [ "$status" -eq 0 ]
+}
+
 @test "cmd_clean --merged --force removes dirty merged worktrees" {
   create_test_worktree "merged-force"
   echo "dirty" > "$TEST_WORKTREES_DIR/merged-force/dirty.txt"
@@ -130,13 +135,27 @@ teardown() {
 
   _clean_detect_provider() { printf "github"; }
   ensure_provider_cli() { return 0; }
-  check_branch_merged() { [ "$2" = "merged-force" ]; }
+  check_branch_merged() { [ "$2" = "merged-force" ] && [ -z "$3" ]; }
   run_hooks_in() { return 0; }
   run_hooks() { return 0; }
 
   run cmd_clean --merged --force --yes
   [ "$status" -eq 0 ]
   [ ! -d "$TEST_WORKTREES_DIR/merged-force" ]
+}
+
+@test "cmd_clean --merged --to filters by target ref" {
+  create_test_worktree "merged-to-main"
+
+  _clean_detect_provider() { printf "github"; }
+  ensure_provider_cli() { return 0; }
+  check_branch_merged() { [ "$2" = "merged-to-main" ] && [ "$3" = "main" ]; }
+  run_hooks_in() { return 0; }
+  run_hooks() { return 0; }
+
+  run cmd_clean --merged --to main --yes
+  [ "$status" -eq 0 ]
+  [ ! -d "$TEST_WORKTREES_DIR/merged-to-main" ]
 }
 
 @test "cmd_clean --merged --force skips the current active worktree" {
@@ -147,7 +166,7 @@ teardown() {
 
   _clean_detect_provider() { printf "github"; }
   ensure_provider_cli() { return 0; }
-  check_branch_merged() { [ "$2" = "active-merged" ]; }
+  check_branch_merged() { [ "$2" = "active-merged" ] && [ -z "$3" ]; }
   run_hooks_in() { return 0; }
   run_hooks() { return 0; }
 

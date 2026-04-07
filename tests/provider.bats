@@ -52,3 +52,46 @@ setup() {
   run extract_hostname ""
   [ "$status" -ne 0 ]
 }
+
+# ── check_branch_merged ───────────────────────────────────────────────────────
+
+@test "check_branch_merged passes base ref to gh" {
+  gh() {
+    [ "$1" = "pr" ] || return 1
+    [ "$2" = "list" ] || return 1
+    [ "$3" = "--head" ] || return 1
+    [ "$4" = "feature/test" ] || return 1
+    [ "$5" = "--base" ] || return 1
+    [ "$6" = "main" ] || return 1
+    [ "$7" = "--state" ] || return 1
+    [ "$8" = "merged" ] || return 1
+    [ "$9" = "--json" ] || return 1
+    [ "${10}" = "state" ] || return 1
+    [ "${11}" = "--jq" ] || return 1
+    [ "${12}" = ".[0].state" ] || return 1
+    printf "MERGED"
+  }
+
+  run check_branch_merged github feature/test main
+  [ "$status" -eq 0 ]
+}
+
+@test "check_branch_merged passes target branch to glab" {
+  glab() {
+    [ "$1" = "mr" ] || return 1
+    [ "$2" = "list" ] || return 1
+    [ "$3" = "--source-branch" ] || return 1
+    [ "$4" = "feature/test" ] || return 1
+    [ "$5" = "--target-branch" ] || return 1
+    [ "$6" = "main" ] || return 1
+    [ "$7" = "--merged" ] || return 1
+    [ "$8" = "--per-page" ] || return 1
+    [ "$9" = "1" ] || return 1
+    [ "${10}" = "--output" ] || return 1
+    [ "${11}" = "json" ] || return 1
+    printf '[{"iid":1}]'
+  }
+
+  run check_branch_merged gitlab feature/test main
+  [ "$status" -eq 0 ]
+}

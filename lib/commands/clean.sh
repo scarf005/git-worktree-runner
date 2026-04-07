@@ -68,9 +68,9 @@ _clean_should_skip() {
 }
 
 # Remove worktrees whose PRs/MRs are merged (handles squash merges)
-# Usage: _clean_merged repo_root base_dir prefix yes_mode dry_run [force] [active_worktree_path]
+# Usage: _clean_merged repo_root base_dir prefix yes_mode dry_run [force] [active_worktree_path] [target_ref]
 _clean_merged() {
-  local repo_root="$1" base_dir="$2" prefix="$3" yes_mode="$4" dry_run="$5" force="${6:-0}" active_worktree_path="${7:-}"
+  local repo_root="$1" base_dir="$2" prefix="$3" yes_mode="$4" dry_run="$5" force="${6:-0}" active_worktree_path="${7:-}" target_ref="${8:-}"
 
   log_step "Checking for worktrees with merged PRs/MRs..."
 
@@ -100,7 +100,7 @@ _clean_merged() {
     fi
 
     # Check if branch has a merged PR/MR
-    if check_branch_merged "$provider" "$branch"; then
+    if check_branch_merged "$provider" "$branch" "$target_ref"; then
       if [ "$dry_run" -eq 1 ]; then
         log_info "[dry-run] Would remove: $branch ($dir)"
         removed=$((removed + 1))
@@ -146,12 +146,14 @@ _clean_merged() {
 cmd_clean() {
   local _spec
   _spec="--merged
+--to: value
 --yes|-y
 --dry-run|-n
 --force|-f"
   parse_args "$_spec" "$@"
 
   local merged_mode="${_arg_merged:-0}"
+  local target_ref="${_arg_to:-}"
   local yes_mode="${_arg_yes:-0}"
   local dry_run="${_arg_dry_run:-0}"
   local force="${_arg_force:-0}"
@@ -204,6 +206,6 @@ EOF
 
   # --merged mode: remove worktrees with merged PRs/MRs (handles squash merges)
   if [ "$merged_mode" -eq 1 ]; then
-    _clean_merged "$repo_root" "$base_dir" "$prefix" "$yes_mode" "$dry_run" "$force" "$active_worktree_path"
+    _clean_merged "$repo_root" "$base_dir" "$prefix" "$yes_mode" "$dry_run" "$force" "$active_worktree_path" "$target_ref"
   fi
 }

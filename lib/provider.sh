@@ -98,21 +98,30 @@ ensure_provider_cli() {
 }
 
 # Check if a branch has a merged PR/MR on the detected provider
-# Usage: check_branch_merged <provider> <branch>
+# Usage: check_branch_merged <provider> <branch> [target_ref]
 # Returns 0 if merged, 1 if not
 check_branch_merged() {
   local provider="$1"
   local branch="$2"
+  local target_ref="${3:-}"
 
   case "$provider" in
     github)
       local pr_state
-      pr_state=$(gh pr list --head "$branch" --state merged --json state --jq '.[0].state' 2>/dev/null || true)
+      if [ -n "$target_ref" ]; then
+        pr_state=$(gh pr list --head "$branch" --base "$target_ref" --state merged --json state --jq '.[0].state' 2>/dev/null || true)
+      else
+        pr_state=$(gh pr list --head "$branch" --state merged --json state --jq '.[0].state' 2>/dev/null || true)
+      fi
       [ "$pr_state" = "MERGED" ]
       ;;
     gitlab)
       local mr_result
-      mr_result=$(glab mr list --source-branch "$branch" --merged --per-page 1 --output json 2>/dev/null || true)
+      if [ -n "$target_ref" ]; then
+        mr_result=$(glab mr list --source-branch "$branch" --target-branch "$target_ref" --merged --per-page 1 --output json 2>/dev/null || true)
+      else
+        mr_result=$(glab mr list --source-branch "$branch" --merged --per-page 1 --output json 2>/dev/null || true)
+      fi
       [ -n "$mr_result" ] && [ "$mr_result" != "[]" ] && [ "$mr_result" != "null" ]
       ;;
     *)
