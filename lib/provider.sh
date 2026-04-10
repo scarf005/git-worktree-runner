@@ -97,6 +97,32 @@ ensure_provider_cli() {
   esac
 }
 
+# Normalize user-provided refs to plain branch names for provider filters.
+# Usage: normalize_target_ref [target_ref]
+normalize_target_ref() {
+  local target_ref="${1:-}"
+  local remote_ref
+
+  [ -n "$target_ref" ] || return 0
+
+  case "$target_ref" in
+    refs/heads/*)
+      printf "%s" "${target_ref#refs/heads/}"
+      ;;
+    refs/remotes/*)
+      remote_ref="${target_ref#refs/remotes/}"
+      printf "%s" "${remote_ref#*/}"
+      ;;
+    *)
+      if git show-ref --verify --quiet "refs/remotes/$target_ref" 2>/dev/null; then
+        printf "%s" "${target_ref#*/}"
+      else
+        printf "%s" "$target_ref"
+      fi
+      ;;
+  esac
+}
+
 # Check if a branch has a merged PR/MR on the detected provider.
 # When branch_tip is provided, require the merged PR/MR to point at the same
 # commit so reused branch names do not match older merged PRs.
@@ -107,21 +133,29 @@ check_branch_merged() {
   local branch="$2"
   local target_ref="${3:-}"
   local branch_tip="${4:-}"
+  local normalized_target_ref
+
+  normalized_target_ref=$(normalize_target_ref "$target_ref") || true
 
   case "$provider" in
     github)
+      local -a gh_args
       local pr_matches
-      if [ -n "$target_ref" ]; then
+      gh_args=(pr list --head "$branch" --state merged --limit 1000)
+      if [ -n "$normalized_target_ref" ]; then
+        gh_args+=(--base "$normalized_target_ref")
+      fi
+      if [ -n "$normalized_target_ref" ]; then
         if [ -n "$branch_tip" ]; then
-          pr_matches=$(gh pr list --head "$branch" --base "$target_ref" --state merged --json state,headRefOid --jq "map(select(.state == \"MERGED\" and .headRefOid == \"$branch_tip\")) | length" 2>/dev/null || true)
+          pr_matches=$(gh "${gh_args[@]}" --json state,headRefOid --jq "map(select(.state == \"MERGED\" and .headRefOid == \"$branch_tip\")) | length" 2>/dev/null || true)
         else
-          pr_matches=$(gh pr list --head "$branch" --base "$target_ref" --state merged --json state --jq 'map(select(.state == "MERGED")) | length' 2>/dev/null || true)
+          pr_matches=$(gh "${gh_args[@]}" --json state --jq 'map(select(.state == "MERGED")) | length' 2>/dev/null || true)
         fi
       else
         if [ -n "$branch_tip" ]; then
-          pr_matches=$(gh pr list --head "$branch" --state merged --json state,headRefOid --jq "map(select(.state == \"MERGED\" and .headRefOid == \"$branch_tip\")) | length" 2>/dev/null || true)
+          pr_matches=$(gh "${gh_args[@]}" --json state,headRefOid --jq "map(select(.state == \"MERGED\" and .headRefOid == \"$branch_tip\")) | length" 2>/dev/null || true)
         else
-          pr_matches=$(gh pr list --head "$branch" --state merged --json state --jq 'map(select(.state == "MERGED")) | length' 2>/dev/null || true)
+          pr_matches=$(gh "${gh_args[@]}" --json state --jq 'map(select(.state == "MERGED")) | length' 2>/dev/null || true)
         fi
       fi
       [ "${pr_matches:-0}" -gt 0 ]
@@ -129,9 +163,9 @@ check_branch_merged() {
     gitlab)
       local mr_result compact_result
       local -a glab_args
-      glab_args=(mr list --source-branch "$branch" --merged --per-page 100 --output json)
-      if [ -n "$target_ref" ]; then
-        glab_args+=(--target-branch "$target_ref")
+      glab_args=(mr list --source-branch "$branch" --merged --all --output json)
+      if [ -n "$normalized_target_ref" ]; then
+        glab_args+=(--target-branch "$normalized_target_ref")
       fi
 
       mr_result=$(glab "${glab_args[@]}" 2>/dev/null || true)
