@@ -85,19 +85,79 @@ setup() {
   [ "$status" -eq 1 ]
 }
 
-@test "check_branch_merged passes target branch to glab" {
+@test "check_branch_merged passes target branch and branch tip to glab" {
   glab() {
     [ "$1" = "mr" ] || return 1
     [ "$2" = "list" ] || return 1
     [ "$3" = "--source-branch" ] || return 1
     [ "$4" = "feature/test" ] || return 1
-    [ "$5" = "--target-branch" ] || return 1
-    [ "$6" = "main" ] || return 1
-    [ "$7" = "--merged" ] || return 1
-    [ "$8" = "--per-page" ] || return 1
-    [ "$9" = "1" ] || return 1
-    [ "${10}" = "--output" ] || return 1
-    [ "${11}" = "json" ] || return 1
+    [ "$5" = "--merged" ] || return 1
+    [ "$6" = "--per-page" ] || return 1
+    [ "$7" = "100" ] || return 1
+    [ "$8" = "--output" ] || return 1
+    [ "$9" = "json" ] || return 1
+    [ "${10}" = "--target-branch" ] || return 1
+    [ "${11}" = "main" ] || return 1
+    printf '[{"iid":1,"sha":"abc123"}]'
+  }
+
+  run check_branch_merged gitlab feature/test main abc123
+  [ "$status" -eq 0 ]
+}
+
+@test "check_branch_merged rejects reused GitLab branch names with different HEAD" {
+  glab() {
+    [ "$1" = "mr" ] || return 1
+    [ "$2" = "list" ] || return 1
+    [ "$3" = "--source-branch" ] || return 1
+    [ "$4" = "feature/test" ] || return 1
+    [ "$5" = "--merged" ] || return 1
+    [ "$6" = "--per-page" ] || return 1
+    [ "$7" = "100" ] || return 1
+    [ "$8" = "--output" ] || return 1
+    [ "$9" = "json" ] || return 1
+    [ "${10}" = "--target-branch" ] || return 1
+    [ "${11}" = "main" ] || return 1
+    printf '[{"iid":1,"sha":"old123"}]'
+  }
+
+  run check_branch_merged gitlab feature/test main def456
+  [ "$status" -eq 1 ]
+}
+
+@test "check_branch_merged accepts GitLab diff_refs head SHA matches" {
+  glab() {
+    [ "$1" = "mr" ] || return 1
+    [ "$2" = "list" ] || return 1
+    [ "$3" = "--source-branch" ] || return 1
+    [ "$4" = "feature/test" ] || return 1
+    [ "$5" = "--merged" ] || return 1
+    [ "$6" = "--per-page" ] || return 1
+    [ "$7" = "100" ] || return 1
+    [ "$8" = "--output" ] || return 1
+    [ "$9" = "json" ] || return 1
+    [ "${10}" = "--target-branch" ] || return 1
+    [ "${11}" = "main" ] || return 1
+    printf '[{"iid":1,"diff_refs":{"head_sha":"abc123"}}]'
+  }
+
+  run check_branch_merged gitlab feature/test main abc123
+  [ "$status" -eq 0 ]
+}
+
+@test "check_branch_merged still accepts GitLab merged MR without branch tip" {
+  glab() {
+    [ "$1" = "mr" ] || return 1
+    [ "$2" = "list" ] || return 1
+    [ "$3" = "--source-branch" ] || return 1
+    [ "$4" = "feature/test" ] || return 1
+    [ "$5" = "--merged" ] || return 1
+    [ "$6" = "--per-page" ] || return 1
+    [ "$7" = "100" ] || return 1
+    [ "$8" = "--output" ] || return 1
+    [ "$9" = "json" ] || return 1
+    [ "${10}" = "--target-branch" ] || return 1
+    [ "${11}" = "main" ] || return 1
     printf '[{"iid":1}]'
   }
 

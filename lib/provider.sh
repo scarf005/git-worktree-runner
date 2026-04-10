@@ -127,13 +127,29 @@ check_branch_merged() {
       [ "${pr_matches:-0}" -gt 0 ]
       ;;
     gitlab)
-      local mr_result
+      local mr_result compact_result
+      local -a glab_args
+      glab_args=(mr list --source-branch "$branch" --merged --per-page 100 --output json)
       if [ -n "$target_ref" ]; then
-        mr_result=$(glab mr list --source-branch "$branch" --target-branch "$target_ref" --merged --per-page 1 --output json 2>/dev/null || true)
-      else
-        mr_result=$(glab mr list --source-branch "$branch" --merged --per-page 1 --output json 2>/dev/null || true)
+        glab_args+=(--target-branch "$target_ref")
       fi
-      [ -n "$mr_result" ] && [ "$mr_result" != "[]" ] && [ "$mr_result" != "null" ]
+
+      mr_result=$(glab "${glab_args[@]}" 2>/dev/null || true)
+      [ -n "$mr_result" ] && [ "$mr_result" != "[]" ] && [ "$mr_result" != "null" ] || return 1
+
+      if [ -n "$branch_tip" ]; then
+        compact_result=$(printf "%s" "$mr_result" | tr -d '[:space:]')
+        case "$compact_result" in
+          *"\"sha\":\"$branch_tip\""*|*"\"head_sha\":\"$branch_tip\""*)
+            return 0
+            ;;
+          *)
+            return 1
+            ;;
+        esac
+      fi
+
+      return 0
       ;;
     *)
       return 1
