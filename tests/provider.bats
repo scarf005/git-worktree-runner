@@ -64,6 +64,7 @@ setup() {
 }
 
 @test "normalize_target_ref strips remote prefix when remote ref exists" {
+  git remote remove upstream >/dev/null 2>&1 || true
   run git remote add upstream https://example.com/repo.git
   [ "$status" -eq 0 ]
   run git update-ref refs/remotes/upstream/main HEAD

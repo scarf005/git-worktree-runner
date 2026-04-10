@@ -113,6 +113,9 @@ normalize_target_ref() {
       remote_ref="${target_ref#refs/remotes/}"
       printf "%s" "${remote_ref#*/}"
       ;;
+    origin/*|upstream/*)
+      printf "%s" "${target_ref#*/}"
+      ;;
     *)
       if git show-ref --verify --quiet "refs/remotes/$target_ref" 2>/dev/null; then
         printf "%s" "${target_ref#*/}"
