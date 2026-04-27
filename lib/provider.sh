@@ -148,18 +148,10 @@ check_branch_merged() {
       if [ -n "$normalized_target_ref" ]; then
         gh_args+=(--base "$normalized_target_ref")
       fi
-      if [ -n "$normalized_target_ref" ]; then
-        if [ -n "$branch_tip" ]; then
-          pr_matches=$(gh "${gh_args[@]}" --json state,headRefOid --jq "map(select(.state == \"MERGED\" and .headRefOid == \"$branch_tip\")) | length" 2>/dev/null || true)
-        else
-          pr_matches=$(gh "${gh_args[@]}" --json state --jq 'map(select(.state == "MERGED")) | length' 2>/dev/null || true)
-        fi
+      if [ -n "$branch_tip" ]; then
+        pr_matches=$(gh "${gh_args[@]}" --json state,headRefOid --jq "map(select(.state == \"MERGED\" and .headRefOid == \"$branch_tip\")) | length" 2>/dev/null || true)
       else
-        if [ -n "$branch_tip" ]; then
-          pr_matches=$(gh "${gh_args[@]}" --json state,headRefOid --jq "map(select(.state == \"MERGED\" and .headRefOid == \"$branch_tip\")) | length" 2>/dev/null || true)
-        else
-          pr_matches=$(gh "${gh_args[@]}" --json state --jq 'map(select(.state == "MERGED")) | length' 2>/dev/null || true)
-        fi
+        pr_matches=$(gh "${gh_args[@]}" --json state --jq 'map(select(.state == "MERGED")) | length' 2>/dev/null || true)
       fi
       [ "${pr_matches:-0}" -gt 0 ]
       ;;
